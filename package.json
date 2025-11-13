@@ -11,11 +11,17 @@
     "build:sharp": "cd dist && rm package-lock.json && npm install sharp",
     "build:zip": "npm run build:deps && npm run build:sharp && cd dist && zip -r -9 ../image-cache-cloudfront.zip ."
   },
-  "keywords": ["cloudfront", "image", "cache", "boilerplate"],
+  "keywords": [
+    "cloudfront",
+    "image",
+    "cache",
+    "boilerplate"
+  ],
   "author": "Alexis Klisch",
   "license": "MIT",
   "packageManager": "pnpm@10.22.0",
   "dependencies": {
+    "pino": "10.1.0",
     "sharp": "0.34.5"
   },
   "devDependencies": {

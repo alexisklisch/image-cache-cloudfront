@@ -1,11 +1,16 @@
 import Sharp from 'sharp'
 import { S3 } from '@aws-sdk/client-s3'
 import config from '@/const'
+import pino from 'pino'
 import type { CloudFrontRequestEvent } from 'aws-lambda'
+
+const logger = pino()
 
 export const handler = async (event: CloudFrontRequestEvent) => {
   const request = event.Records[0].cf.request
   const { uri, querystring } = request
+  // uri example - /imgs/properties/1234567890.png or /imgs/posts/1234567890/img1.jpg
+  // queryString example - ?w=320&format=webp
 
   const {
     ALLOWED_WIDTHS,
@@ -69,15 +74,34 @@ export const handler = async (event: CloudFrontRequestEvent) => {
         vary: [{ value: 'Accept' }]
       }
     }
-  } catch (error: any) { // TODO: Add type
-    // Verificar si el error es que el archivo no existe
+  } catch (error: unknown) {
+    // Verificar si el error es que el archivo no existe en S3
+    // En AWS SDK v3, los errores tienen $metadata con httpStatusCode
+    const awsError = error as { name?: string; $metadata?: { httpStatusCode?: number } }
+    const isNotFoundError =
+      awsError.name === 'NoSuchKey' ||
+      awsError.name === 'NotFound' ||
+      awsError.$metadata?.httpStatusCode === 404
+
+    if (isNotFoundError) {
+      return {
+        status: '404',
+        statusDescription: 'Not Found',
+        headers: {
+          'content-type': [{ value: 'text/plain' }]
+        },
+        body: 'Image not found'
+      }
+    }
+    logger.error(error, 'Error processing image')
+    // Cualquier otro error (S3, Sharp, etc.) es un error 500
     return {
-      status: '404',
-      statusDescription: 'Not Found',
+      status: '500',
+      statusDescription: 'Internal Server Error',
       headers: {
         'content-type': [{ value: 'text/plain' }]
       },
-      body: 'Image not found'
+      body: 'Internal server error'
     }
   }
 }
