@@ -5,10 +5,14 @@
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
-    "zip": "rm dist/ -rf && mkdir dist/ && cp -a src/ dist/src && cp package.json dist/ && cd dist && pnpm install --node-linker=hoisted --prod && zip -r -9 ../dist_cache-cloudfront.zip ."
+    "build:ts": "rm dist/ -rf && tsc && tsc-alias",
+    "build:package": "npm run build:ts && tsx build-script.ts",
+    "build:deps": "npm run build:package && cd dist && npm install --omit=dev",
+    "build:sharp": "cd dist && rm package-lock.json && npm install sharp",
+    "build:zip": "npm run build:deps && npm run build:sharp && cd dist && zip -r -9 ../image-cache-cloudfront.zip ."
   },
   "keywords": ["cloudfront", "image", "cache", "boilerplate"],
-  "author": "",
+  "author": "Alexis Klisch",
   "license": "MIT",
   "packageManager": "pnpm@10.22.0",
   "dependencies": {

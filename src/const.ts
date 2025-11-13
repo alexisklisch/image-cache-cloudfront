@@ -4,6 +4,6 @@ export default {
   ALLOWED_FORMATS: ['jpeg', 'webp', 'avif', 'png'],
   DEFAULT_FORMAT: 'jpeg',
 
-  S3_REGION: 'sa-east-1', // required
+  S3_REGION: 'your-region', // required
   S3_BUCKET: 'your-bucket', // required
 } as const
