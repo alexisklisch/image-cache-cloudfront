@@ -1,6 +1,6 @@
 {
   "name": "image-cache-cloudfront",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Boilerplate for a CloudFront image cache",
   "type": "module",
   "main": "src/index.ts",
