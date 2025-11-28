@@ -1,7 +1,7 @@
-import Sharp from 'sharp'
 import { S3 } from '@aws-sdk/client-s3'
-import config from '@/const'
+import Sharp from 'sharp'
 import pino from 'pino'
+import config from '@/const'
 import type { CloudFrontRequestEvent } from 'aws-lambda'
 
 const logger = pino()
@@ -15,8 +15,10 @@ export const handler = async (event: CloudFrontRequestEvent) => {
   const {
     ALLOWED_WIDTHS,
     ALLOWED_FORMATS,
+    CACHE_CONTROL,
     DEFAULT_WIDTH,
     DEFAULT_FORMAT,
+    RESIZE_FIT,
     S3_REGION,
     S3_BUCKET
   } = config
@@ -44,7 +46,7 @@ export const handler = async (event: CloudFrontRequestEvent) => {
       statusDescription: 'Moved Permanently',
       headers: {
         location: [{ value: redirectUrl }],
-        'cache-control': [{ value: 'max-age=31536000' }]
+        'cache-control': [{ value: `max-age=${CACHE_CONTROL}` }]
       }
     }
   }
@@ -52,7 +54,6 @@ export const handler = async (event: CloudFrontRequestEvent) => {
   // Continuar con el procesamiento normal
   const s3 = new S3({ region: S3_REGION })
   const key = uri.slice(1)
-  // const [...resourcePath, resourceId] = key.split('/')
 
   // Obtener el objeto de S3
   try {
@@ -60,7 +61,7 @@ export const handler = async (event: CloudFrontRequestEvent) => {
     const imageBody = await originalImage.Body?.transformToByteArray()
 
     const transformedImage = await Sharp(imageBody)
-      .resize({ width: closestWidth, fit: 'inside' })
+      .resize({ width: closestWidth, fit: RESIZE_FIT })
       .toFormat(format)
       .toBuffer()
 
@@ -70,13 +71,13 @@ export const handler = async (event: CloudFrontRequestEvent) => {
       bodyEncoding: 'base64',
       headers: {
         'content-type': [{ value: `image/${format}` }],
-        'cache-control': [{ value: 'max-age=31536000' }],
+        'cache-control': [{ value: `max-age=${CACHE_CONTROL}` }],
         vary: [{ value: 'Accept' }]
       }
     }
   } catch (error: unknown) {
-    // Verificar si el error es que el archivo no existe en S3
-    // En AWS SDK v3, los errores tienen $metadata con httpStatusCode
+    // Check if the error is that the file does not exist in S3
+    // In AWS SDK v3, errors have $metadata with httpStatusCode
     const awsError = error as { name?: string; $metadata?: { httpStatusCode?: number } }
     const isNotFoundError =
       awsError.name === 'NoSuchKey' ||
@@ -94,7 +95,7 @@ export const handler = async (event: CloudFrontRequestEvent) => {
       }
     }
     logger.error(error, 'Error processing image')
-    // Cualquier otro error (S3, Sharp, etc.) es un error 500
+    // Any other error (S3, Sharp, etc.) is a 500 error
     return {
       status: '500',
       statusDescription: 'Internal Server Error',
